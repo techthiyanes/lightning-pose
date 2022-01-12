@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 from torchtyping import TensorType, patch_typeguard
+import math
 from typeguard import typechecked
 from typing import List, Literal, Optional, Tuple, Union, Dict, Any
 import pytorch_lightning as pl
@@ -162,7 +163,7 @@ def generate_heatmaps(
         width: width of original image (pixels)
         output_shape: dimensions of downsampled heatmap, (height, width)
         sigma: control spread of gaussian
-        normalize: normalize to a probability distribution (heatmap sums to one)
+        normalize: whether or not to normalize to a probability distribution (heatmap sums to one)
         nan_heatmap_mode: flag for how to treat nans: "uniform" | "zero"
             "uniform" returns a uniform probability distribution
             "zero" returns all zeros
@@ -193,9 +194,9 @@ def generate_heatmaps(
     confidence *= -1
     confidence /= 2 * sigma ** 2
     confidence = torch.exp(confidence)
-    if not normalize:
+    if normalize:
         confidence /= sigma * torch.sqrt(
-            2 * torch.tensor(math.pi), device=keypoints.device
+            2 * torch.tensor(math.pi)
         )
 
     if nan_heatmap_mode == "uniform":

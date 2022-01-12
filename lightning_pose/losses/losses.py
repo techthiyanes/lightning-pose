@@ -237,6 +237,9 @@ class HeatmapWassersteinLoss(HeatmapLoss):
             "num_valid_keypoints", "heatmap_height", "heatmap_width"
         ],
     ) -> TensorType["num_valid_keypoints"]:
+        print(targets.shape, predictions.shape)
+        targets, predictions = targets.unsqueeze(0), predictions.unsqueeze(0)
+        print(targets.shape, predictions.shape)
         return self.wasserstein_loss(targets, predictions)
 
 

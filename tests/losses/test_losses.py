@@ -71,6 +71,35 @@ def test_heatmap_wasserstein_loss():
     )
     assert loss2 > loss
 
+def test_heatmap_losses_nans():
+    from lightning_pose.losses.losses import HeatmapLoss, HeatmapMSELoss, HeatmapWassersteinLoss
+    base_heatmap_loss = HeatmapLoss()
+    mse_loss = HeatmapMSELoss()
+    wass_loss = HeatmapWassersteinLoss()
+
+    targets = torch.ones((3, 7, 48, 48)) / (48 * 48)
+    zero_map = torch.zeros((48, 48))
+
+    targets[1,1] = zero_map
+    targets[1,2] = zero_map
+    targets[2,6] = zero_map
+    
+    predictions = torch.ones_like(targets) / (48 * 48) + 0.1 * torch.randn_like(
+        targets
+    )
+
+    clean_targets, clean_preds = base_heatmap_loss.remove_nans(targets, predictions)    
+    assert(clean_targets.shape == (18, 48, 48) and clean_preds.shape == (18, 48, 48))
+
+    l1, _ = mse_loss(
+        heatmaps_targ=targets, heatmaps_pred=predictions, stage=stage,
+    )
+
+    l2, _ = wass_loss(
+        heatmaps_targ=targets, heatmaps_pred=predictions, stage=stage,
+    )
+
+    print(l1, l2)
 
 def test_pca_singleview_loss(base_data_module):
 

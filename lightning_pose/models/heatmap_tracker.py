@@ -78,6 +78,8 @@ class HeatmapTracker(BaseSupervisedTracker):
         # use this to log auxiliary information: rmse on labeled data
         self.rmse_loss = RegressionRMSELoss()
 
+        self.softmax = nn.Softmax(dim=-1)
+
         # necessary so we don't have to pass in model arguments when loading
         self.save_hyperparameters(ignore="loss_factory")  # cannot be pickled
 
@@ -182,14 +184,14 @@ class HeatmapTracker(BaseSupervisedTracker):
         """Forward pass through the network."""
         representations = self.get_representations(images)
         heatmaps = self.heatmaps_from_representations(representations)
-        # B = heatmaps.shape[0]
-        # valid_probability_heatmaps = self.softmax(
-        #     heatmaps.reshape(B, self.num_keypoints, -1)
-        # )
-        # valid_probability_heatmaps = valid_probability_heatmaps.reshape(
-        #     B, self.num_keypoints, self.output_shape[0], self.output_shape[1]
-        # )
-        return heatmaps
+        B = heatmaps.shape[0]
+        valid_probability_heatmaps = self.softmax(
+            heatmaps.reshape(B, self.num_keypoints, -1)
+        )
+        valid_probability_heatmaps = valid_probability_heatmaps.reshape(
+            B, self.num_keypoints, self.output_shape[0], self.output_shape[1]
+        )
+        return valid_probability_heatmaps
 
     @typechecked
     def get_loss_inputs_labeled(self, batch_dict: HeatmapBatchDict) -> dict:
