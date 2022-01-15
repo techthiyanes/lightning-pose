@@ -152,7 +152,7 @@ def generate_heatmaps(
     width: int,  # width of full sized image
     output_shape: Tuple[int, int],  # dimensions of downsampled heatmap
     sigma: Union[float, int] = 1.25,  # sigma used for generating heatmaps
-    normalize: bool = True,
+    normalize_mode: str = None, # "valid", "gaussian", or None
     nan_heatmap_mode: str = "zero",
 ) -> TensorType["batch", "num_keypoints", "height", "width"]:
     """Generate 2D Gaussian heatmaps from mean and sigma.
@@ -194,10 +194,15 @@ def generate_heatmaps(
     confidence *= -1
     confidence /= 2 * sigma ** 2
     confidence = torch.exp(confidence)
-    if normalize:
+    if normalize_mode == "None" or "none":
+        normalize_mode = None
+    if normalize_mode == "gaussian":
         confidence /= sigma * torch.sqrt(
             2 * torch.tensor(math.pi)
         )
+    elif normalize_mode == "valid":
+        map_sum = confidence.sum(dim=[-2, -1], keepdim=True)
+        confidence / torch.clamp(map_sum, min=1e-32)
 
     if nan_heatmap_mode == "uniform":
         uniform_heatmap = torch.ones(

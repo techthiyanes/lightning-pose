@@ -24,7 +24,7 @@ header_rows: [1, 2]
 downsample_factor: 2
 
 # whether or not to normalize heatmaps to a probability distribution (heatmap sums to one)
-normalize_heatmaps: False
+normalize_heatmaps_mode: "valid" #"valid", "gaussian", or "None"
 
 # total number of body parts
 num_keypoints: 17

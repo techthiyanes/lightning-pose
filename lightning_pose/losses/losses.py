@@ -237,9 +237,11 @@ class HeatmapWassersteinLoss(HeatmapLoss):
             "num_valid_keypoints", "heatmap_height", "heatmap_width"
         ],
     ) -> TensorType["num_valid_keypoints"]:
-        print(targets.shape, predictions.shape)
-        targets, predictions = targets.unsqueeze(0), predictions.unsqueeze(0)
-        print(targets.shape, predictions.shape)
+        targets = targets.reshape(targets.shape[0], -1)
+        predictions = predictions.reshape(predictions.shape[0], -1) 
+        #geomloss library only supports one dimensional heatmaps, 
+        #is there a better way to do this conversion such that the flattening
+        #happens in diagonal order or something else to preserve 2d distances?
         return self.wasserstein_loss(targets, predictions)
 
 

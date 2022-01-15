@@ -170,7 +170,7 @@ class HeatmapDataset(BaseTrackingDataset):
         header_rows: Optional[List[int]] = None,
         imgaug_transform: Optional[Callable] = None,
         pytorch_transform_list: Optional[List] = None,
-        normalize_heatmaps: bool = False,
+        normalize_heatmaps_mode: str = None,
         no_nans: bool = False,
         downsample_factor: int = 2,
     ) -> None:
@@ -217,7 +217,7 @@ class HeatmapDataset(BaseTrackingDataset):
             )
             self.keypoints = torch.tensor(self.keypoints)
         
-        self.normalize_heatmaps = normalize_heatmaps
+        self.normalize_heatmaps_mode = normalize_heatmaps_mode
         self.downsample_factor = downsample_factor
         # self.sigma = 5
         self.output_sigma = 1.25  # should be sigma/2 ^downsample factor
@@ -260,7 +260,7 @@ class HeatmapDataset(BaseTrackingDataset):
                 example_dict["images"].shape[-1],
                 output_shape=self.output_shape,
                 sigma=self.output_sigma,
-                normalize=self.normalize_heatmaps,
+                normalize_mode=self.normalize_heatmaps_mode,
             )
             assert y_heatmap.shape == (1, self.num_keypoints, *self.output_shape)
             label_heatmaps[idx] = y_heatmap[0]
