@@ -184,14 +184,14 @@ class HeatmapTracker(BaseSupervisedTracker):
         """Forward pass through the network."""
         representations = self.get_representations(images)
         heatmaps = self.heatmaps_from_representations(representations)
-        B = heatmaps.shape[0]
-        valid_probability_heatmaps = self.softmax(
-            heatmaps.reshape(B, self.num_keypoints, -1)
-        )
-        valid_probability_heatmaps = valid_probability_heatmaps.reshape(
-            B, self.num_keypoints, self.output_shape[0], self.output_shape[1]
-        )
-        return valid_probability_heatmaps
+        # B = heatmaps.shape[0]
+        # valid_probability_heatmaps = self.softmax(
+        #     heatmaps.reshape(B, self.num_keypoints, -1)
+        # )
+        # valid_probability_heatmaps = valid_probability_heatmaps.reshape(
+        #     B, self.num_keypoints, self.output_shape[0], self.output_shape[1]
+        # )
+        return heatmaps
 
     @typechecked
     def get_loss_inputs_labeled(self, batch_dict: HeatmapBatchDict) -> dict:

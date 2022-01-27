@@ -47,7 +47,7 @@ def make_dataset_and_viz_from_csvs(cfg: DictConfig):
         os.path.join(data_dir, cfg.data.csv_file), header=header_rows
     )
     image_names = list(csv_data.iloc[:, 0])
-    num_kpts = cfg.data.num_targets // 2
+    num_kpts = cfg.data.num_keypoints
     gt_keypoints = csv_data.iloc[:, 1:].to_numpy()
     gt_keypoints = gt_keypoints.reshape(-1, num_kpts, 2)
 
@@ -124,8 +124,8 @@ def make_dataset_and_viz_from_csvs(cfg: DictConfig):
                 keypoints=[fo.Keypoint(points=model_kpts_list)]
             )
             # TODO: fo.Heatmap does not exist?
-            # model_heatmap = model_heatmaps_np[model_idx][img_idx][keypoint_idx]
-            # sample[model_name + "_heatmap_"] = fo.Heatmap(map=model_heatmap)
+            model_heatmap = model_heatmaps_np[model_idx][img_idx][keypoint_idx]
+            sample[model_name + "_heatmap_"] = fo.Heatmap(map=model_heatmap)
 
         samples.append(sample)
         keypoint_idx += 1

@@ -251,7 +251,6 @@ class HeatmapDataset(BaseTrackingDataset):
         for idx in range(len(self.image_names)):
             example_dict: BaseExampleDict = super().__getitem__(idx)
             # super().__getitem__ returns flat keypoints, reshape to
-
             y_heatmap = generate_heatmaps(
                 example_dict["keypoints"].reshape(
                     1, self.num_keypoints, 2

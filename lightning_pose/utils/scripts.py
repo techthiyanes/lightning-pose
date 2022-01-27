@@ -50,7 +50,7 @@ def get_dataset(
             csv_path=cfg.data.csv_file,
             header_rows=OmegaConf.to_object(cfg.data.header_rows),
             imgaug_transform=imgaug_transform,
-            normalize_heatmaps=cfg.data.normalize_heatmaps,
+            normalize_heatmaps_mode=cfg.data.normalize_heatmaps_mode,
             downsample_factor=cfg.data.downsample_factor,
         )
     else:

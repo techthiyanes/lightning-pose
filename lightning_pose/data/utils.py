@@ -194,7 +194,7 @@ def generate_heatmaps(
     confidence *= -1
     confidence /= 2 * sigma ** 2
     confidence = torch.exp(confidence)
-    if normalize_mode == "None" or "none":
+    if normalize_mode == "None" or normalize_mode == "none":
         normalize_mode = None
     if normalize_mode == "gaussian":
         confidence /= sigma * torch.sqrt(
@@ -202,8 +202,8 @@ def generate_heatmaps(
         )
     elif normalize_mode == "valid":
         map_sum = confidence.sum(dim=[-2, -1], keepdim=True)
-        confidence / torch.clamp(map_sum, min=1e-32)
-
+        #print(map_sum)
+        confidence /= torch.clamp(map_sum, min=1e-32)
     if nan_heatmap_mode == "uniform":
         uniform_heatmap = torch.ones(
             (out_height, out_width), device=keypoints.device

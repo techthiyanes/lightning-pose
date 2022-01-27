@@ -23,6 +23,7 @@ from geomloss import SamplesLoss
 from omegaconf import ListConfig
 import pytorch_lightning as pl
 import torch
+from torch import nn
 from torch.nn import functional as F
 from torchtyping import TensorType, patch_typeguard
 from typeguard import typechecked
@@ -237,8 +238,8 @@ class HeatmapWassersteinLoss(HeatmapLoss):
             "num_valid_keypoints", "heatmap_height", "heatmap_width"
         ],
     ) -> TensorType["num_valid_keypoints"]:
-        targets = targets.reshape(targets.shape[0], -1)
-        predictions = predictions.reshape(predictions.shape[0], -1) 
+        targets = targets.reshape(targets.shape[0], 1, -1)
+        predictions = predictions.reshape(predictions.shape[0], 1, -1) 
         #geomloss library only supports one dimensional heatmaps, 
         #is there a better way to do this conversion such that the flattening
         #happens in diagonal order or something else to preserve 2d distances?
@@ -413,6 +414,8 @@ class UnimodalLoss(Loss):
         self.original_image_width = original_image_width
         self.downsampled_image_height = downsampled_image_height
         self.downsampled_image_width = downsampled_image_width
+        
+        self.softmax = nn.Softmax(dim=-1)
 
         if self.loss_name == "unimodal_wasserstein":
             reach_ = None if (reach == "none") else reach
@@ -433,7 +436,6 @@ class UnimodalLoss(Loss):
             "batch", "num_keypoints", "heatmap_height", "heatmap_width"
         ],
     ) -> torch.Tensor:
-
         if self.loss_name == "unimodal_mse":
             return F.mse_loss(targets, predictions, reduction="none")
         elif self.loss_name == "unimodal_wasserstein":
@@ -456,7 +458,11 @@ class UnimodalLoss(Loss):
         stage: Optional[Literal["train", "val", "test"]] = None,
         **kwargs,
     ) -> Tuple[TensorType[()], List[dict]]:
-
+        
+        # B, num_keypoints = heatmaps_pred.shape[:2]
+        # heatmaps_pred = self.softmax(
+        #     heatmaps_pred.reshape(B, num_keypoints, -1)
+        # ).reshape(B, num_keypoints, self.downsampled_image_height, self.downsampled_image_width)
         # turn keypoint predictions into unimodal heatmaps
         keypoints_pred = keypoints_pred.reshape(keypoints_pred.shape[0], -1, 2)
         heatmaps_ideal = generate_heatmaps(  # this process doesn't compute gradients
@@ -464,6 +470,7 @@ class UnimodalLoss(Loss):
             height=self.original_image_height,
             width=self.original_image_width,
             output_shape=(self.downsampled_image_height, self.downsampled_image_width),
+            normalize_mode="None",
         )
 
         # compare unimodal heatmaps with predicted heatmaps
