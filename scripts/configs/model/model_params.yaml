@@ -13,8 +13,9 @@ learn_weights: False
 # reach parameter for wasserstein loss
 reach: None
 
-# resnet version for backbone: 18 | 34 | 50 | 101 | 152
-resnet_version: 50
+# resnet version for backbone: resnet18 | resnet34 | resnet50 | resnet01 | resnet152
+# efficientnet version for backbone eff0 | eff1 | eff2
+backbone: "eff0"
 
 # prediction mode: "heatmap" | "regression"
 model_type: "heatmap"

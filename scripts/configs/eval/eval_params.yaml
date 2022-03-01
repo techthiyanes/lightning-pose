@@ -1,5 +1,5 @@
 # paths to the hydra config files in the output folder, OR absolute paths to such folders.
-hydra_paths: ["2021-12-15/04-11-43/"]
+hydra_paths: ["2022-02-14/13-11-38/"]
 
 fiftyone:
   # will be the name of the dataset (Mongo DB) created by FiftyOne. for video dataset, we will append dataset_name + "_video"

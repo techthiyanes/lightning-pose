@@ -18,37 +18,42 @@ MULTISTEPLR_GAMMA_DEFAULT = 0.5
 
 @typechecked
 def grab_resnet_backbone(
-    resnet_version: Literal[18, 34, 50, 101, 152] = 18,
+    backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
     pretrained: bool = True,
-) -> models.resnet.ResNet:
+):
     """Load resnet architecture from torchvision.
 
     Args:
-        resnet_version: choose network depth
+
+        backbone: choose network
         pretrained: True to load weights pretrained on imagenet
 
     Returns:
         selected resnet architecture as a model object
 
     """
-    resnets = {
-        18: models.resnet18,
-        34: models.resnet34,
-        50: models.resnet50,
-        101: models.resnet101,
-        152: models.resnet152,
+    backbone_dict= {
+        "resnet18": models.resnet18,
+        "resnet34": models.resnet34,
+        "resnet50": models.resnet50,
+        "resnet101": models.resnet101,
+        "resnet152": models.resnet152,
+        "eff0": models.efficientnet_b0,
+        "eff1": models.efficientnet_b1,
+        "eff2": models.efficientnet_b2
+
     }
-    return resnets[resnet_version](pretrained)
+    return backbone_dict[backbone](pretrained)
 
 
 @typechecked
 def grab_layers_sequential(
-    model: models.resnet.ResNet, last_layer_ind: Optional[int] = None
+    model, last_layer_ind: Optional[int] = None
 ) -> torch.nn.modules.container.Sequential:
     """Package selected number of layers into a nn.Sequential object.
 
     Args:
-        model: original resnet model
+        model: original resnet model or efficientnet model
         last_layer_ind: final layer to pass data through
 
     Returns:
@@ -98,7 +103,7 @@ class BaseFeatureExtractor(LightningModule):
 
     def __init__(
         self,
-        resnet_version: Literal[18, 34, 50, 101, 152] = 18,
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -2,
         lr_scheduler: str = "multisteplr",
@@ -110,6 +115,7 @@ class BaseFeatureExtractor(LightningModule):
         on ImageNet or randomly initialized. These were originally used for
         classification tasks, so we truncate their final fully connected layer.
 
+        ###TODO#####
         Args:
             resnet_version: which ResNet version to use; defaults to 18
             pretrained: True to load weights pretrained on imagenet
@@ -121,11 +127,18 @@ class BaseFeatureExtractor(LightningModule):
         super().__init__()
         print("\n Initializing a {} instance.".format(self._get_name()))
 
-        self.resnet_version = resnet_version
+        self.backbone = backbone
         base = grab_resnet_backbone(
-            resnet_version=self.resnet_version, pretrained=pretrained
+            backbone=self.backbone, pretrained=pretrained
         )
-        self.num_fc_input_features = base.fc.in_features
+        ### get the last layer features for the base network
+
+        if "resnet" in self.backbone:
+            self.num_fc_input_features = base.fc.in_features
+        elif "eff" in self.backbone:
+            self.num_fc_input_features = base.classifier[-1].in_features
+
+        
         self.backbone = grab_layers_sequential(
             model=base,
             last_layer_ind=last_resnet_layer_to_get,

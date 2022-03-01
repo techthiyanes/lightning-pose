@@ -27,7 +27,7 @@ class RegressionTracker(BaseSupervisedTracker):
         self,
         num_keypoints: int,
         loss_factory: LossFactory,
-        resnet_version: Literal[18, 34, 50, 101, 152] = 18,
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -2,
         representation_dropout_rate: float = 0.2,
@@ -40,6 +40,9 @@ class RegressionTracker(BaseSupervisedTracker):
         Args:
             num_keypoints: number of body parts
             loss_factory: object to orchestrate loss computation
+
+
+            #####TODO#######
             resnet_version: ResNet variant to be used (e.g. 18, 34, 50, 101,
                 or 152); essentially specifies how large the resnet will be
             pretrained: True to load pretrained imagenet weights
@@ -58,7 +61,7 @@ class RegressionTracker(BaseSupervisedTracker):
         torch.manual_seed(torch_seed)
 
         super().__init__(
-            resnet_version=resnet_version,
+            backbone=backbone,
             pretrained=pretrained,
             last_resnet_layer_to_get=last_resnet_layer_to_get,
             lr_scheduler=lr_scheduler,
@@ -67,7 +70,7 @@ class RegressionTracker(BaseSupervisedTracker):
         self.num_keypoints = num_keypoints
         self.num_targets = self.num_keypoints * 2
         self.loss_factory = loss_factory
-        self.resnet_version = resnet_version
+        self.backbone = backbone
         self.final_layer = nn.Linear(self.num_fc_input_features, self.num_targets)
         # TODO: consider removing dropout
         self.representation_dropout = nn.Dropout(p=representation_dropout_rate)
@@ -118,7 +121,7 @@ class SemiSupervisedRegressionTracker(SemiSupervisedTrackerMixin, RegressionTrac
         num_keypoints: int,
         loss_factory: LossFactory,
         loss_factory_unsupervised: LossFactory,
-        resnet_version: Literal[18, 34, 50, 101, 152] = 18,
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -2,
         representation_dropout_rate: float = 0.2,
@@ -149,7 +152,7 @@ class SemiSupervisedRegressionTracker(SemiSupervisedTrackerMixin, RegressionTrac
         super().__init__(
             num_keypoints=num_keypoints,
             loss_factory=loss_factory,
-            resnet_version=resnet_version,
+            backbone=backbone,
             pretrained=pretrained,
             representation_dropout_rate=representation_dropout_rate,
             last_resnet_layer_to_get=last_resnet_layer_to_get,
