@@ -1,14 +1,14 @@
 # paths to the hydra config files in the output folder, OR absolute paths to such folders.
-hydra_paths: ["2022-02-14/13-11-38/"]
+hydra_paths: ["2022-03-08/09-37-24/", "2022-03-08/10-51-51/"]
 
 fiftyone:
   # will be the name of the dataset (Mongo DB) created by FiftyOne. for video dataset, we will append dataset_name + "_video"
-  dataset_name: "rick_data_test"
+  dataset_name: "rick_data_res_eff"
 
   build_speed: "slow" # "slow"/"fast". "fast" drops keypoint name and confidence information for faster processing.
 
   # if you want to manually provide a different model name to be displayed in FiftyOne
-  model_display_names: ["test_model"]
+  model_display_names: ["resnet", "effnet"]
 
   # whether to launch the app from the script (True), or from ipython (and have finer control over the outputs)
   launch_app_from_script: False
@@ -18,10 +18,10 @@ fiftyone:
 
 # str with an absolute path to a directory containing videos for prediction.
 # (it's not absolute just for the toy example)
-test_videos_directory: "toy_datasets/toymouseRunningData/unlabeled_videos"
+test_videos_directory: "toy_datasets/mouseRunningData/unlabeled_videos"
 
 # str with an absolute path to directory in which you want to save .csv with predictions
-saved_vid_preds_dir: "toy_datasets/toymouseRunningData"
+saved_vid_preds_dir: "toy_datasets/mouseRunningData"
 
 # params for loading images from the video using nvidia-dali
 dali_parameters:
@@ -29,7 +29,7 @@ dali_parameters:
   sequence_length: 16
 
 # str with absolute path to the video file you want plotted with keypoints
-video_file_to_plot: "/home/jovyan/lightning-pose/toy_datasets/toymouseRunningData/unlabeled_videos/test_vid.mp4"
+video_file_to_plot: "/home/jovyan/lightning-pose/toy_datasets/mouseRunningData/unlabeled_videos/180726_005.mp4"
 
 # a list of strings, each points to a .csv file with predictions of a given model to the same video. will be combined with video_file_to_plot to make a visualization
 pred_csv_files_to_plot:
