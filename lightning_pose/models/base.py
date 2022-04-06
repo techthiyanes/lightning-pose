@@ -63,6 +63,16 @@ def grab_layers_sequential(
     layers = list(model.children())[: last_layer_ind + 1]
     return nn.Sequential(*layers)
 
+@typechecked
+def grab_layers_sequential_3d(model, last_layer_ind):
+    """
+    This is to use a 3d model to extract features
+    """
+    
+    layers = list(model.blocks)[: last_layer_ind + 1] + [nn.AvgPool3d(kernel_size=(1, 8, 8), stride=(1, 1, 1), padding=(0, 0, 0))]
+    
+    return nn.Sequential(*layers)
+
 
 class BaseBatchDict(TypedDict):
     """Class for finer control over typechecking."""
@@ -103,7 +113,7 @@ class BaseFeatureExtractor(LightningModule):
 
     def __init__(
         self,
-        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2", "3d"] = "resnet18",
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -2,
         lr_scheduler: str = "multisteplr",
@@ -128,21 +138,37 @@ class BaseFeatureExtractor(LightningModule):
         print("\n Initializing a {} instance.".format(self._get_name()))
 
         self.backbone = backbone
-        base = grab_resnet_backbone(
-            backbone=self.backbone, pretrained=pretrained
-        )
+        if "3d" in self.backbone:
+            self.mode = "3d"
+            self.num_repeat = 8
+        else:
+            self.mode = "2d"
+
+        if "3d" in self.backbone:
+            
+            base = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
+        else:
+            base = grab_resnet_backbone(
+                backbone=self.backbone, pretrained=pretrained
+            )
         ### get the last layer features for the base network
+
 
         if "resnet" in self.backbone:
             self.num_fc_input_features = base.fc.in_features
         elif "eff" in self.backbone:
             self.num_fc_input_features = base.classifier[-1].in_features
+        elif "3d" in self.backbone:
+            self.num_fc_input_features = base.blocks[-1].proj.in_features
 
-        
-        self.backbone = grab_layers_sequential(
-            model=base,
-            last_layer_ind=last_resnet_layer_to_get,
-        )
+        if "3d" in self.backbone:
+            self.backbone = grab_layers_sequential_3d(model=base, last_layer_ind = last_resnet_layer_to_get)
+        else:
+
+            self.backbone = grab_layers_sequential(
+                model=base,
+                last_layer_ind=last_resnet_layer_to_get,
+            )
 
         self.lr_scheduler = lr_scheduler
         self.lr_scheduler_params = lr_scheduler_params
@@ -166,7 +192,16 @@ class BaseFeatureExtractor(LightningModule):
             dimensions, and are not necessarily equal.
 
         """
-        return self.backbone(images)
+        
+        if self.mode=="2d":
+            return self.backbone(images)
+        
+        else:
+            images = torch.unsqueze(images,2)
+            images = torch.repeat_interleave(images, self.num_repeat, dim=2)
+            output = self.backbone(images)
+            output = torch.mean(output, dim = 2)
+            return output
 
     def forward(self, images):
         """Forward pass from images to representations.
