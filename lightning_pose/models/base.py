@@ -9,6 +9,7 @@ from torchtyping import TensorType, patch_typeguard
 import torchvision.models as models
 from typeguard import typechecked
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypedDict, Union
+from lightning_pose.models.i3d_model import InceptionI3d
 
 patch_typeguard()  # use before @typechecked
 
@@ -69,7 +70,8 @@ def grab_layers_sequential_3d(model, last_layer_ind):
     This is to use a 3d model to extract features
     """
     
-    layers = list(model.blocks)[: last_layer_ind + 1] + [nn.AvgPool3d(kernel_size=(1, 8, 8), stride=(1, 1, 1), padding=(0, 0, 0))]
+    # layers = list(model.blocks)[: last_layer_ind + 1] + [nn.AvgPool3d(kernel_size=(1, 9, 9), stride=(1, 1, 1), padding=(0, 0, 0))]
+    layers = list(model.blocks)[: last_layer_ind + 1]
     
     return nn.Sequential(*layers)
 
@@ -77,6 +79,10 @@ def grab_layers_sequential_3d(model, last_layer_ind):
 class BaseBatchDict(TypedDict):
     """Class for finer control over typechecking."""
 
+    # for 3d input
+    # images: TensorType["batch", "RGB":3, "frames",  "image_height", "image_width", float]
+
+    # for 2d input
     images: TensorType["batch", "RGB":3, "image_height", "image_width", float]
     keypoints: TensorType["batch", "num_targets", float]
     idxs: TensorType["batch", int]
@@ -140,13 +146,14 @@ class BaseFeatureExtractor(LightningModule):
         self.backbone = backbone
         if "3d" in self.backbone:
             self.mode = "3d"
-            self.num_repeat = 8
+            self.num_repeat = 4
         else:
             self.mode = "2d"
 
         if "3d" in self.backbone:
             
             base = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
+            # base = InceptionI3d(157, in_channels = 3)
         else:
             base = grab_resnet_backbone(
                 backbone=self.backbone, pretrained=pretrained
@@ -156,13 +163,27 @@ class BaseFeatureExtractor(LightningModule):
 
         if "resnet" in self.backbone:
             self.num_fc_input_features = base.fc.in_features
+            print(self.num_fc_input_features)
         elif "eff" in self.backbone:
             self.num_fc_input_features = base.classifier[-1].in_features
+            
         elif "3d" in self.backbone:
-            self.num_fc_input_features = base.blocks[-1].proj.in_features
+
+            # for 3d resnet
+            self.num_fc_input_features = 2048
+
+
+            # for i3d 
+            # self.num_fc_input_features = 1024
 
         if "3d" in self.backbone:
+
+            # for 3d resnet
             self.backbone = grab_layers_sequential_3d(model=base, last_layer_ind = last_resnet_layer_to_get)
+
+            # for i3d
+            # self.backbone = base
+            # self.backbone.load_state_dict(torch.load('/home/jovyan/lightning-pose/i3d_weights/rgb_charades.pt'))
         else:
 
             self.backbone = grab_layers_sequential(
@@ -175,7 +196,7 @@ class BaseFeatureExtractor(LightningModule):
 
     def get_representations(
         self,
-        images: TensorType["batch", "channels":3, "image_height", "image_width", float],
+        images,
     ) -> TensorType["batch", "features", "rep_height", "rep_width", float]:
         """Forward pass from images to feature maps.
 
@@ -194,13 +215,24 @@ class BaseFeatureExtractor(LightningModule):
         """
         
         if self.mode=="2d":
-            return self.backbone(images)
+            
+            output = self.backbone(images)
+            
+            return output
         
         else:
-            images = torch.unsqueze(images,2)
-            images = torch.repeat_interleave(images, self.num_repeat, dim=2)
+            
+
+            # for 3d resnet
             output = self.backbone(images)
+            
             output = torch.mean(output, dim = 2)
+
+
+            # for i3d
+            # output = self.backbone.extract_features(images)
+            # output = output.squeeze(2)
+            
             return output
 
     def forward(self, images):
@@ -256,7 +288,7 @@ class BaseSupervisedTracker(BaseFeatureExtractor):
     @typechecked
     def get_loss_inputs_labeled(
         self,
-        batch_dict: Union[BaseBatchDict, HeatmapBatchDict],
+        batch_dict,
     ) -> dict:
         """Return predicted coordinates for a batch of data."""
         raise NotImplementedError
@@ -264,7 +296,7 @@ class BaseSupervisedTracker(BaseFeatureExtractor):
     @typechecked
     def evaluate_labeled(
         self,
-        batch_dict: Union[BaseBatchDict, HeatmapBatchDict],
+        batch_dict,
         stage: Optional[Literal["train", "val", "test"]] = None,
     ) -> TensorType[(), float]:
         """Compute and log the losses on a batch of labeled data."""
@@ -302,7 +334,7 @@ class BaseSupervisedTracker(BaseFeatureExtractor):
     @typechecked
     def validation_step(
         self,
-        val_batch: Union[BaseBatchDict, HeatmapBatchDict],
+        val_batch,
         batch_idx: int,
     ) -> None:
         """Base validation step, a wrapper around the `evaluate_labeled` method."""
@@ -311,7 +343,7 @@ class BaseSupervisedTracker(BaseFeatureExtractor):
     @typechecked
     def test_step(
         self,
-        test_batch: Union[BaseBatchDict, HeatmapBatchDict],
+        test_batch,
         batch_idx: int,
     ) -> None:
         """Base test step, a wrapper around the `evaluate_labeled` method."""

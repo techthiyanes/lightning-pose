@@ -9,7 +9,7 @@ image_resize_dims:
   width: 256
 
 # ABSOLUTE path to data directory. the below is just a toy example for running Getting Started scripts
-data_dir: "toy_datasets/mouseRunningData"
+data_dir: "toy_datasets/mirror-mouse"
 
 # ABSOLUTE path to unlabeled videos' directory. the below is just a toy example for running Getting Started scripts (TODO: Matt, can have multiple vids)
 video_dir: "unlabeled_videos"

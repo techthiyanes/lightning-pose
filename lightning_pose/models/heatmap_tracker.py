@@ -32,7 +32,7 @@ class HeatmapTracker(BaseSupervisedTracker):
         self,
         num_keypoints: int,
         loss_factory: LossFactory,
-        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2", "3d"] = "resnet18",
         downsample_factor: Literal[2, 3] = 2,
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -3,
@@ -82,7 +82,10 @@ class HeatmapTracker(BaseSupervisedTracker):
         self.loss_factory = loss_factory.to(self.device)
         # TODO: downsample_factor may be in mismatch between datamodule and model.
         self.downsample_factor = downsample_factor
+        # self.intermediate_layer = self.create_intermediate_layer()
+
         self.upsampling_layers = self.make_upsampling_layers()
+        
         self.initialize_upsampling_layers()
         self.output_shape = output_shape
         self.temperature = torch.tensor(100, device=self.device)  # soft argmax temp
@@ -147,7 +150,10 @@ class HeatmapTracker(BaseSupervisedTracker):
         # Note:
         # https://github.com/jgraving/DeepPoseKit/blob/cecdb0c8c364ea049a3b705275ae71a2f366d4da/deepposekit/models/DeepLabCut.py#L131
         # in their model, the pixel shuffle happens only for downsample_factor=2
+        
+        
         upsampling_layers = [nn.PixelShuffle(2)]
+        
         upsampling_layers.append(
             self.create_double_upsampling_layer(
                 in_channels=self.num_filters_for_upsampling // 4,
@@ -187,13 +193,25 @@ class HeatmapTracker(BaseSupervisedTracker):
         """Wrapper around self.upsampling_layers for type and shape assertion."""
         return self.upsampling_layers(representations)
 
+    def create_intermediate_layer(self):
+
+        return nn.Conv2d(1024, 2048, 3, 2, padding = 1)
+
+    def intermediate_representation(self, representations):
+
+        return self.intermediate_layer(representations)
+
     @typechecked
     def forward(
         self,
-        images: TensorType["batch", "channels":3, "image_height", "image_width"],
+        images,
     ) -> TensorType["batch", "num_keypoints", "heatmap_height", "heatmap_width"]:
         """Forward pass through the network."""
         representations = self.get_representations(images)
+
+        # Comment for 2d 
+        # representations = self.intermediate_representation(representations)
+
         heatmaps = self.heatmaps_from_representations(representations)
         # B = heatmaps.shape[0]
         # valid_probability_heatmaps = self.softmax(
@@ -229,7 +247,7 @@ class SemiSupervisedHeatmapTracker(SemiSupervisedTrackerMixin, HeatmapTracker):
         num_keypoints: int,
         loss_factory: LossFactory,
         loss_factory_unsupervised: LossFactory,
-        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2"] = "resnet18",
+        backbone: Literal["resnet18", "resnet34", "resnet50", "resnet101", "resnet152","eff0", "eff1", "eff2", "3d"] = "resnet18",
         downsample_factor: Literal[2, 3] = 2,
         pretrained: bool = True,
         last_resnet_layer_to_get: int = -3,
