@@ -9,6 +9,7 @@ import nvidia.dali.types as types
 import torch
 from typeguard import typechecked
 from typing import List, Optional, Union
+from torchtyping import TensorType
 
 from lightning_pose.data import _IMAGENET_MEAN, _IMAGENET_STD
 
@@ -76,10 +77,7 @@ def video_pipe(
     video = video / 255.0
     # permute dimensions and normalize to imagenet statistics
     transform = fn.crop_mirror_normalize(
-        video,
-        output_layout="FCHW",
-        mean=normalization_mean,
-        std=normalization_std,
+        video, output_layout="FCHW", mean=normalization_mean, std=normalization_std,
     )
     return transform
 
@@ -104,3 +102,30 @@ class LightningWrapper(DALIGenericIterator):
             out[0]["x"][0, :, :, :, :],  # should be (sequence_length, 3, H, W)
             dtype=torch.float,
         )  # careful: only valid for one sequence, i.e., batch size of 1.
+
+
+# TODO: first and last inds here will be less reliable due to the repetitions
+# either fix post-hoc, or do something else
+def get_context_from_seq(
+    img_seq: TensorType["sequence_length", 3, "image_height", "image_width"],
+    context_length: int,
+) -> TensorType["sequence_length", "context_length", 3, "image_height", "image_width"]:
+    pass
+    # our goal is to extract 5-frame sequences from this sequence
+    img_shape = img_seq.shape[1:]
+    seq_len = img_seq.shape[0]
+    train_seq = torch.zeros(
+        (seq_len, context_length, *img_shape), device=img_seq.device
+    )
+    # define pads: start pad repeats the zeroth image twice. end pad repeats the last image twice.
+    # this is to give padding for the first and last frames of the sequence
+    pad_start = torch.tile(img_seq[0].unsqueeze(0), (2, 1, 1, 1))
+    pad_end = torch.tile(img_seq[-1].unsqueeze(0), (2, 1, 1, 1))
+    # pad the sequence
+    padded_seq = torch.cat((pad_start, img_seq, pad_end), dim=0)
+    # padded_seq = torch.cat((two_pad, img_seq, two_pad), dim=0)
+    for i in range(seq_len):
+        # extract 5-frame sequences from the padded sequence
+        train_seq[i] = padded_seq[i : i + context_length]
+    return train_seq
+
