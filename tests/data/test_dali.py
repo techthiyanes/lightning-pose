@@ -71,3 +71,13 @@ def test_dali_wrapper(cfg, video_list):
         assert batch.shape == (seq_len, 3, im_height, im_width)
         # just check a single batch
         break
+
+
+def test_context_seq_func():
+    # create a fake sequence of 10 images, the shape that comes out from DALI
+    seq_len = 10
+    img_shape = (3, 2, 2)
+    img_seq = torch.zeros((seq_len,) + img_shape)
+    for i in range(seq_len):
+        img = torch.ones(img_shape) * i
+        img_seq[i] = img
